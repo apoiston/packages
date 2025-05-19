@@ -1,0 +1,69 @@
+name: build packages
+
+on:
+  workflow_dispatch:
+
+env:
+  TZ: Asia/Shanghai 
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+
+    steps:
+      - name: set timezone
+        run: |
+          sudo timedatectl set-timezone Asia/Shanghai
+          date +"%Y-%m-%d %H:%M:%S"
+          
+      - name: system info
+        run: |
+          date +"%Y-%m-%d %H:%M:%S"
+          lscpu | grep -E '^Architecture|^CPU\(s\):|^Model name'
+          uname -sr
+          lsb_release -a
+          free -h
+
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: build
+        uses: apoiston/actions@packages
+        with:
+          config_buildinfo: config/config.buildinfo
+          private-key: ${{ secrets.PRIVATE_KEY }}
+          public-key: ${{ secrets.PUBLIC_KEY }}
+          prepare_packages_init: ${{ secrets.PREPARE_PACKAGES_INIT }}          
+          prepare_packages_configure: ${{ secrets.PREPARE_PACKAGES_CONFIGURE }}          
+          prepare_packages: ${{ secrets.PREPARE_PACKAGES }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: |
+            ./openwrt/apps.tar.gz
+
+      - name: prepare
+        run: |
+          date +"%Y-%m-%d %H:%M:%S"
+          git clone --depth=1 --quiet --branch packages https://github.com/apoiston/index.git
+          sed -i "s/N\/A/$(date +"%Y-%m-%d %H:%M:%S")/g" index/index.html
+          cp -a index/*.{html,css,js} $GITHUB_WORKSPACE
+          cp -a openwrt/SNAPSHOT $GITHUB_WORKSPACE
+
+      - name: commit
+        continue-on-error: true
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan apps
+          git rm -rf .
+          git add *.{html,css,js} SNAPSHOT
+          git commit -m "updated on $(date +"%Y.%m.%d %H:%M:%S")"
+          git push origin apps --force
