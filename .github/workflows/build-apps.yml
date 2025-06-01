@@ -1,4 +1,4 @@
-name: build packages
+name: build apps
 
 on:
   workflow_dispatch:
@@ -65,5 +65,5 @@ jobs:
           git checkout --orphan apps
           git rm -rf .
           git add *.{html,css,js} SNAPSHOT
-          git commit -m "updated on $(date +"%Y.%m.%d %H:%M:%S")"
+          git commit -m "update on $(date +"%Y.%m.%d %H:%M:%S")"
           git push origin apps --force
