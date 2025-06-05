@@ -1,1 +1,1 @@
-19f617fb9d7e31c1710fe74729d9b32701b310cbf586da604319349eb3d96592 *openwrt-sdk-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst
+88e5724f5e372d42568b5008bcc4cf31c604f92217ccbcc11ff89531b70d76b8 *openwrt-sdk-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst
