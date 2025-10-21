@@ -27,6 +27,7 @@ jobs:
           uname -sr
           lsb_release -a
           free -h
+          df -Th
 
       - name: checkout
         uses: actions/checkout@v4
