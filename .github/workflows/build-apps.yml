@@ -1,0 +1,73 @@
+name: build apps
+
+on:
+  workflow_dispatch:
+
+env:
+  TZ: Asia/Shanghai 
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+
+    steps:
+      - name: set timezone
+        run: |
+          sudo timedatectl set-timezone Asia/Shanghai
+          date +"%Y-%m-%d %H:%M:%S %Z"
+          
+      - name: system info
+        run: |
+          date +"%Y-%m-%d %H:%M:%S %Z"
+          lscpu | grep -E '^Architecture|^CPU\(s\):|^Model name'
+          uname -sr
+          lsb_release -a
+          free -h
+          df -Th
+
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: build
+        uses: apoiston/actions@apps
+        with:
+          config_buildinfo: builder/config.buildinfo
+          private_key: ${{ secrets.PRIVATE_KEY }}
+          public_key: ${{ secrets.PUBLIC_KEY }}
+          prepare_sdk: ${{ secrets.PREPARE_SDK }}          
+          prepare_apps: ${{ secrets.PREPARE_APPS }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: apps
+          path: |
+            openwrt/*.gz
+            openwrt/*.zst
+
+      - name: prepare
+        run: |
+          date +"%Y-%m-%d %H:%M:%S %Z"
+          git clone --depth=1 --quiet --branch packages https://github.com/apoiston/index.git
+          sed -i "s/N\/A/$(date +"%Y-%m-%d %H:%M:%S %Z")/g" index/index.html
+          rsync -a --quiet --include="*.html" --include="*.css" --include="*.js" --exclude="*" index/ "$GITHUB_WORKSPACE/"
+          rsync -a --quiet openwrt/snapshots "$GITHUB_WORKSPACE/"
+          printf '%s\n' "${{ secrets.PUBLIC_KEY }}" > "$GITHUB_WORKSPACE/public-key.pem"
+
+      - name: commit
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan apps
+          git rm -rf .
+          git add *.{html,css,js} snapshots public-key.pem
+          git commit -m "build: $(date +"%Y-%m-%d %H:%M:%S %Z") [APPS]"
+          git push origin apps --force
